@@ -10,26 +10,24 @@ export default function Navbar() {
 
   const [role, setRole] = useState(null);
 
-  // Check login status
+  // Sync role on route change
   useEffect(() => {
     const token = localStorage.getItem("token");
-    const userRole = localStorage.getItem("role");
+    const storedRole = localStorage.getItem("role");
 
-    if (token && userRole) {
-      setRole(userRole);
+    if (token && storedRole) {
+      setRole(storedRole.toUpperCase());
     } else {
       setRole(null);
     }
-  }, [pathname]); // re-check on route change
+  }, [pathname]);
 
   const handleLogout = () => {
-    // Clear everything
     localStorage.removeItem("token");
     localStorage.removeItem("role");
 
     setRole(null);
 
-    // Force refresh UI
     router.push("/");
     router.refresh();
   };
@@ -41,6 +39,7 @@ export default function Navbar() {
       </div>
 
       <div className="nav-actions">
+        {/* ADMIN VIEW */}
         {role === "ADMIN" && (
           <>
             <Link href="/admin">
@@ -57,6 +56,7 @@ export default function Navbar() {
           </>
         )}
 
+        {/* USER VIEW */}
         {role === "USER" && (
           <>
             <Link href="/dashboard">
@@ -73,13 +73,14 @@ export default function Navbar() {
           </>
         )}
 
+        {/* NOT LOGGED IN */}
         {!role && (
           <>
             <Link href="/login">
               <button className="btn primary">Login / Register</button>
             </Link>
 
-            <Link href="/login?type=admin">
+            <Link href="/admin">
               <button className="btn secondary">Admin Login</button>
             </Link>
           </>
