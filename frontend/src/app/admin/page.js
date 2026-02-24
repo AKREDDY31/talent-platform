@@ -1,96 +1,63 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import API from "@/lib/api";
 
-export default function AdminPage() {
-  const [projects, setProjects] = useState([]);
-  const [loading, setLoading] = useState(true);
+export default function AdminLogin() {
+  const router = useRouter();
 
-  const fetchProjects = async () => {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [message, setMessage] = useState("");
+
+  const handleSubmit = async () => {
     try {
-      const res = await API.get("/admin/projects");
-      setProjects(res.data);
-    } catch (err) {
-      console.error("Failed to fetch projects");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchProjects();
-  }, []);
-
-  const handleReview = async (id, score, feedback) => {
-    if (!score) return alert("Score required");
-
-    try {
-      await API.put(`/admin/projects/${id}`, {
-        score: Number(score),
-        feedback,
+      const res = await API.post("/auth/login", {
+        email,
+        password,
       });
 
-      fetchProjects(); // refresh leaderboard automatically
-    } catch {
-      alert("Review failed");
+      const role = res.data.user.role.toUpperCase();
+
+      if (role !== "ADMIN") {
+        setMessage("You are not an admin.");
+        return;
+      }
+
+      localStorage.setItem("token", res.data.token);
+      localStorage.setItem("role", role);
+
+      router.push("/admin");
+
+    } catch (err) {
+      setMessage("Invalid credentials.");
     }
   };
 
-  if (loading) return <p className="center">Loading...</p>;
-
   return (
-    <div className="container">
-      <h1>Admin Dashboard</h1>
+    <div className="auth-container">
+      <div className="auth-card">
+        <h2>Admin Login</h2>
 
-      <div className="table-wrapper">
-        <table className="admin-table">
-          <thead>
-            <tr>
-              <th>Project</th>
-              <th>User</th>
-              <th>Score</th>
-              <th>Feedback</th>
-              <th>New Score</th>
-              <th>New Feedback</th>
-              <th>Action</th>
-            </tr>
-          </thead>
+        {message && <p style={{ color: "red" }}>{message}</p>}
 
-          <tbody>
-            {projects.map((p) => (
-              <tr key={p.id}>
-                <td>{p.title}</td>
-                <td>{p.user.name}</td>
-                <td>{p.score ?? "-"}</td>
-                <td>{p.feedback ?? "-"}</td>
+        <input
+          placeholder="Email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
 
-                <td>
-                  <input type="number" id={`score-${p.id}`} />
-                </td>
+        <input
+          type="password"
+          placeholder="Password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
 
-                <td>
-                  <input type="text" id={`feedback-${p.id}`} />
-                </td>
-
-                <td>
-                  <button
-                    className="btn primary"
-                    onClick={() =>
-                      handleReview(
-                        p.id,
-                        document.getElementById(`score-${p.id}`).value,
-                        document.getElementById(`feedback-${p.id}`).value
-                      )
-                    }
-                  >
-                    Submit
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <button onClick={handleSubmit}>
+          Login
+        </button>
       </div>
     </div>
   );
