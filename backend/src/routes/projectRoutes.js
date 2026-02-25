@@ -5,41 +5,35 @@ import {
   submitProject,
   getMyProjects,
   getPublicLeaderboard,
-  downloadCertificate
+  downloadCertificate,
+  getMyProjectTracking,
+  submitPresentationLink,
+  verifyPublicCertificate,
+  downloadPublicCertificate,
 } from "../controllers/projectController.js";
 
 import { protect } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-// Rate limiter (prevents spam submissions)
 const projectLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 20, // max 20 requests per IP
+  windowMs: 15 * 60 * 1000,
+  max: 20,
   message: {
     success: false,
-    message: "Too many requests. Please try again later."
-  }
+    message: "Too many requests. Please try again later.",
+  },
 });
 
-// =======================
-// Protected Routes
-// =======================
-
-// Submit project
 router.post("/", protect, projectLimiter, submitProject);
-
-// Get logged-in user's projects
 router.get("/mine", protect, getMyProjects);
-
-// Download certificate
+router.get("/tracking", protect, getMyProjectTracking);
+router.patch("/:projectId/presentation", protect, submitPresentationLink);
 router.get("/certificate/:projectId", protect, downloadCertificate);
 
-// =======================
-// Public Routes
-// =======================
+router.get("/public/certificate/verify", verifyPublicCertificate);
+router.get("/public/certificate/:projectId/download", downloadPublicCertificate);
 
-// Public leaderboard
 router.get("/leaderboard", getPublicLeaderboard);
 
 export default router;

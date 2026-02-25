@@ -7,15 +7,13 @@ import authRoutes from "./routes/authRoutes.js";
 import projectRoutes from "./routes/projectRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 import leaderboardRoutes from "./routes/leaderboardRoutes.js";
+import platformRoutes from "./routes/platformRoutes.js";
 import { errorHandler } from "./middleware/errorMiddleware.js";
 
 dotenv.config();
 
 const app = express();
 
-// =======================
-// Security Middlewares
-// =======================
 app.use(helmet());
 
 app.use(cors({
@@ -25,22 +23,16 @@ app.use(cors({
 
 app.use(express.json());
 
-// =======================
-// Routes
-// =======================
 app.use("/api/auth", authRoutes);
 app.use("/api/projects", projectRoutes);
 app.use("/api/admin", adminRoutes);
-app.use("/api/leaderboard", leaderboardRoutes);   // ✅ NEW ROUTE
+app.use("/api/leaderboard", leaderboardRoutes);
+app.use("/api/platform", platformRoutes);
 
 app.get("/", (req, res) => {
   res.send("API running...");
 });
 
-// =======================
-// Global Error Handler
-// (must be LAST middleware)
-// =======================
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;

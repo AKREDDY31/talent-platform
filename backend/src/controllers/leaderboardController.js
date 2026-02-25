@@ -2,33 +2,44 @@ import prisma from "../config/prisma.js";
 
 export const getLeaderboard = async (req, res) => {
   try {
-    const users = await prisma.user.findMany({
+    const projects = await prisma.project.findMany({
+      where: { score: { not: null } },
       include: {
-        projects: true
-      }
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
     });
 
-    const leaderboard = users.map((user) => {
-      const totalScore = user.projects.reduce(
-        (sum, project) => sum + (project.score || 0),
-        0
-      );
+    const byUser = new Map();
 
-      return {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        totalScore,
-        projectCount: user.projects.length
+    for (const project of projects) {
+      const current = byUser.get(project.user.id) || {
+        id: project.user.id,
+        name: project.user.name,
+        email: project.user.email,
+        totalScore: 0,
+        projectCount: 0,
+        averageScore: 0,
       };
+
+      current.totalScore += project.score || 0;
+      current.projectCount += 1;
+      current.averageScore = Number((current.totalScore / current.projectCount).toFixed(2));
+      byUser.set(project.user.id, current);
+    }
+
+    const leaderboard = Array.from(byUser.values()).sort((a, b) => {
+      if (b.totalScore !== a.totalScore) return b.totalScore - a.totalScore;
+      return b.averageScore - a.averageScore;
     });
 
-    // Sort descending
-    leaderboard.sort((a, b) => b.totalScore - a.totalScore);
-
-    res.json(leaderboard);
-
+    return res.json(leaderboard);
   } catch (error) {
-    res.status(500).json({ message: "Failed to fetch leaderboard" });
+    return res.status(500).json({ message: "Failed to fetch leaderboard" });
   }
 };

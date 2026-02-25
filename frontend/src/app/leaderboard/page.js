@@ -1,115 +1,129 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import API from "@/lib/api";
 
-export default function Leaderboard() {
-  const [data, setData] = useState([]);
-  const [currentUserId, setCurrentUserId] = useState(null);
-  const [page, setPage] = useState(1);
+const metricLabel = {
+  totalScore: "Total Score",
+  averageScore: "Average Score",
+  projectCount: "Projects Reviewed",
+};
 
-  const rowsPerPage = 5;
+export default function LeaderboardPage() {
+  const router = useRouter();
+  const [rows, setRows] = useState([]);
+  const [search, setSearch] = useState("");
+  const [sortBy, setSortBy] = useState("totalScore");
+  const [order, setOrder] = useState("desc");
+  const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const rowsPerPage = 8;
 
   useEffect(() => {
-    fetchLeaderboard();
-
-    const user = JSON.parse(localStorage.getItem("user"));
-    if (user) {
-      setCurrentUserId(user.id);
+    const token = localStorage.getItem("token");
+    if (!token) {
+      router.push("/login");
+      return;
     }
 
-    // Auto refresh every 10 seconds
-    const interval = setInterval(() => {
-      fetchLeaderboard();
-    }, 10000);
+    API.get("/leaderboard")
+      .then((res) => setRows(res.data || []))
+      .catch((err) => setError(err.response?.data?.message || "Failed to load leaderboard"))
+      .finally(() => setLoading(false));
+  }, [router]);
 
-    return () => clearInterval(interval);
-  }, []);
+  const filtered = useMemo(() => {
+    const term = search.toLowerCase().trim();
+    const copied = [...rows].filter((entry) => {
+      if (!term) return true;
+      return entry.name.toLowerCase().includes(term) || entry.email.toLowerCase().includes(term);
+    });
 
-  const fetchLeaderboard = async () => {
-    try {
-      const res = await API.get("/leaderboard");
-      setData(res.data);
-    } catch (err) {
-      console.log("Failed to load leaderboard");
-    }
-  };
+    copied.sort((a, b) => {
+      const left = a[sortBy];
+      const right = b[sortBy];
+      if (left === right) return 0;
+      return order === "asc" ? left - right : right - left;
+    });
 
-  // Pagination logic
-  const totalPages = Math.ceil(data.length / rowsPerPage);
-  const start = (page - 1) * rowsPerPage;
-  const paginatedData = data.slice(start, start + rowsPerPage);
+    return copied;
+  }, [rows, search, sortBy, order]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / rowsPerPage));
+  const currentPage = Math.min(page, totalPages);
+  const pageRows = filtered.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
 
   return (
-    <div style={{ padding: "40px 80px" }}>
-      <h1 style={{ marginBottom: "30px" }}>🏆 Public Leaderboard</h1>
+    <div>
+      <h1 className="page-title">Public Leaderboard</h1>
+      <p className="page-subtitle">Visible after login to keep participant data private and role-aware.</p>
+      {error && <div className="alert error">{error}</div>}
 
-      <div style={{ overflowX: "auto" }}>
-        <table style={tableStyle}>
-          <thead>
-            <tr>
-              <th>Rank</th>
-              <th>Name</th>
-              <th>Total Score</th>
-              <th>Projects</th>
-            </tr>
-          </thead>
-          <tbody>
-            {paginatedData.map((user, index) => {
-              const globalRank = start + index + 1;
-              const isCurrentUser = user.id === currentUserId;
+      <section className="table-shell">
+        <div className="table-top">
+          <b>Leaderboard Table</b>
+          <div className="table-tools">
+            <input className="input" placeholder="Search name or email" value={search} onChange={(e) => setSearch(e.target.value)} />
+            <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+              <option value="totalScore">Total Score</option>
+              <option value="averageScore">Average Score</option>
+              <option value="projectCount">Project Count</option>
+            </select>
+            <select value={order} onChange={(e) => setOrder(e.target.value)}>
+              <option value="desc">Descending</option>
+              <option value="asc">Ascending</option>
+            </select>
+          </div>
+        </div>
 
-              return (
-                <tr
-                  key={user.id}
-                  style={
-                    isCurrentUser
-                      ? { backgroundColor: "#e6f0ff", fontWeight: "bold" }
-                      : {}
-                  }
-                >
-                  <td>#{globalRank}</td>
-                  <td>{user.name}</td>
-                  <td style={{ color: "#2563eb", fontWeight: "600" }}>
-                    {user.totalScore}
-                  </td>
-                  <td>{user.projectCount}</td>
+        {loading ? (
+          <div style={{ padding: 16 }}>Loading...</div>
+        ) : (
+          <>
+            <table>
+              <thead>
+                <tr>
+                  <th>Rank</th>
+                  <th>Candidate</th>
+                  <th>Total Score</th>
+                  <th>Average Score</th>
+                  <th>Projects</th>
+                  <th>Primary Metric</th>
                 </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Pagination Controls */}
-      <div style={{ marginTop: "20px", display: "flex", gap: "10px" }}>
-        <button
-          disabled={page === 1}
-          onClick={() => setPage(page - 1)}
-        >
-          Previous
-        </button>
-
-        <span>
-          Page {page} of {totalPages}
-        </span>
-
-        <button
-          disabled={page === totalPages}
-          onClick={() => setPage(page + 1)}
-        >
-          Next
-        </button>
-      </div>
+              </thead>
+              <tbody>
+                {pageRows.map((row, idx) => (
+                  <tr key={row.id}>
+                    <td>#{(currentPage - 1) * rowsPerPage + idx + 1}</td>
+                    <td>
+                      <b>{row.name}</b>
+                      <div>{row.email}</div>
+                    </td>
+                    <td>{row.totalScore}</td>
+                    <td>{row.averageScore}</td>
+                    <td>{row.projectCount}</td>
+                    <td>{metricLabel[sortBy]}: <b>{row[sortBy]}</b></td>
+                  </tr>
+                ))}
+                {!pageRows.length && (
+                  <tr>
+                    <td colSpan={6}>No leaderboard records found.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+            <div className="table-top" style={{ borderTop: "1px solid #e1e9f3", borderBottom: 0 }}>
+              <span>Page {currentPage} of {totalPages}</span>
+              <div className="table-tools">
+                <button className="btn secondary" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={currentPage <= 1}>Previous</button>
+                <button className="btn secondary" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={currentPage >= totalPages}>Next</button>
+              </div>
+            </div>
+          </>
+        )}
+      </section>
     </div>
   );
 }
-
-const tableStyle = {
-  width: "100%",
-  borderCollapse: "collapse",
-  backgroundColor: "white",
-  borderRadius: "10px",
-  overflow: "hidden",
-  boxShadow: "0 5px 15px rgba(0,0,0,0.08)"
-};

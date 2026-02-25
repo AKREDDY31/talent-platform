@@ -8,32 +8,89 @@ datasource db {
 }
 
 model User {
-  id        String    @id @default(uuid())
-  name      String
-  email     String    @unique
-  password  String
-  role      Role      @default(USER)
-  projects  Project[]
-  createdAt DateTime  @default(now())
+  id             String               @id @default(uuid())
+  name           String
+  email          String               @unique
+  password       String
+  role           Role                 @default(USER)
+  phone          String?
+  college        String?
+  graduationYear Int?
+  skills         String?
+  bio            String?
+  projects       Project[]
+  resetTokens    PasswordResetToken[]
+  chatMessages   ChatMessage[]
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
 
   @@index([email])
 }
 
 model Project {
-  id          String    @id @default(uuid())
-  title       String
-  githubLink  String
-  score       Int?
-  feedback    String?
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId      String
-  createdAt   DateTime  @default(now())
+  id                   String        @id @default(uuid())
+  title                String
+  githubLink           String
+  demoLink             String?
+  description          String?
+  techStack            String?
+  status               ProjectStatus @default(SUBMITTED)
+  isOpened             Boolean       @default(false)
+  nextStagePassed      Boolean?
+  score                Int?
+  feedback             String?
+  presentationLink     String?
+  technicalInterviewAt DateTime?
+  user                 User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId               String
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
 
   @@index([userId])
   @@index([score])
+  @@index([status])
+}
+
+model PasswordResetToken {
+  id        String   @id @default(uuid())
+  tokenHash String   @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model ProblemStatement {
+  id        String   @id @default(uuid())
+  content   String?
+  updatedBy String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ChatMessage {
+  id        String   @id @default(uuid())
+  message   String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([userId])
 }
 
 enum Role {
   USER
   ADMIN
+}
+
+enum ProjectStatus {
+  SUBMITTED
+  OPENED
+  SHORTLISTED
+  REJECTED
 }

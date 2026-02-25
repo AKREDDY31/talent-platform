@@ -1,115 +1,114 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import API from "@/lib/api";
 
-export default function Dashboard() {
+const initialProject = {
+  title: "",
+  githubLink: "",
+  demoLink: "",
+  techStack: "",
+  description: "",
+};
+
+export default function DashboardPage() {
   const router = useRouter();
 
+  const [form, setForm] = useState(initialProject);
   const [projects, setProjects] = useState([]);
-  const [title, setTitle] = useState("");
-  const [githubLink, setGithubLink] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [notice, setNotice] = useState({ type: "", text: "" });
 
-  // Protect Route
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      router.push("/login");
-    }
-  }, []);
+  const reviewedCount = useMemo(() => projects.filter((p) => p.score !== null).length, [projects]);
 
-  const fetchProjects = async () => {
+  const fetchSummary = useCallback(async () => {
     try {
-      const res = await API.get("/projects/mine");
-      setProjects(res.data.data);
-    } catch (err) {
-      console.log(err);
-    }
-  };
-
-  useEffect(() => {
-    fetchProjects();
-  }, []);
-
-  const submitProject = async () => {
-    if (!title || !githubLink) return;
-
-    try {
-      setLoading(true);
-      await API.post("/projects", { title, githubLink });
-      setTitle("");
-      setGithubLink("");
-      fetchProjects();
-    } catch (err) {
-      alert("Submission failed");
+      const trackingRes = await API.get("/projects/tracking");
+      setProjects(trackingRes.data.data || []);
+    } catch (error) {
+      setNotice({ type: "error", text: error.response?.data?.message || "Failed to load dashboard data" });
     } finally {
       setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    const role = localStorage.getItem("role");
+
+    if (!token || role !== "USER") {
+      router.push("/login");
+      return;
+    }
+
+    fetchSummary();
+  }, [fetchSummary, router]);
+
+  const setField = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
+
+  const submitProject = async () => {
+    if (!form.title || !form.githubLink) {
+      setNotice({ type: "error", text: "Project title and GitHub link are required" });
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      setNotice({ type: "", text: "" });
+      await API.post("/projects", form);
+      setForm(initialProject);
+      setNotice({ type: "success", text: "Project submitted successfully" });
+      fetchSummary();
+    } catch (error) {
+      setNotice({ type: "error", text: error.response?.data?.message || "Submission failed" });
+    } finally {
+      setSubmitting(false);
     }
   };
 
   return (
-    <div className="page-container">
-      <h1 className="section-title">My Projects</h1>
+    <div>
+      <h1 className="page-title">User Dashboard</h1>
+      <p className="page-subtitle">Submit new projects from this dashboard. Tracking and other modules are available in their dedicated sections.</p>
 
-      <div className="form-inline">
-        <input
-          className="input"
-          placeholder="Project Title"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-        />
+      {notice.text && <div className={`alert ${notice.type}`}>{notice.text}</div>}
 
-        <input
-          className="input"
-          placeholder="GitHub Link"
-          value={githubLink}
-          onChange={(e) => setGithubLink(e.target.value)}
-        />
+      <section className="metrics">
+        <div className="metric">Total Submissions<b>{loading ? "..." : projects.length}</b></div>
+        <div className="metric">Reviewed<b>{loading ? "..." : reviewedCount}</b></div>
+        <div className="metric">Shortlisted<b>{loading ? "..." : projects.filter((p) => p.status === "SHORTLISTED").length}</b></div>
+        <div className="metric">Rejected<b>{loading ? "..." : projects.filter((p) => p.status === "REJECTED").length}</b></div>
+      </section>
 
-        <button
-          onClick={submitProject}
-          className="btn primary"
-          disabled={loading}
-        >
-          {loading ? "Submitting..." : "Submit"}
-        </button>
-      </div>
-
-      {projects.length === 0 && (
-        <p style={{ color: "#6b7280" }}>
-          No projects submitted yet.
-        </p>
-      )}
-
-      {projects.map((p) => (
-        <div key={p.id} className="project-card">
-          <h3>{p.title}</h3>
-
-          <div className="project-meta">
-            Score: {p.score ?? "Not Reviewed"}
-          </div>
-
-          <div className="project-meta">
-            Feedback: {p.feedback ?? "-"}
-          </div>
-
-          {p.score !== null && (
-            <button
-              className="btn secondary"
-              onClick={() =>
-                window.open(
-                  `http://localhost:5000/api/projects/certificate/${p.id}`,
-                  "_blank"
-                )
-              }
-            >
-              Download Certificate
-            </button>
-          )}
+      <section className="card" style={{ maxWidth: 760 }}>
+        <h3>Upload New Project</h3>
+        <div className="input-wrap">
+          <label>Project title*</label>
+          <input className="input" value={form.title} onChange={(e) => setField("title", e.target.value)} />
         </div>
-      ))}
+        <div className="input-wrap">
+          <label>GitHub repository link*</label>
+          <input className="input" value={form.githubLink} onChange={(e) => setField("githubLink", e.target.value)} />
+        </div>
+        <div className="input-wrap">
+          <label>Demo link</label>
+          <input className="input" value={form.demoLink} onChange={(e) => setField("demoLink", e.target.value)} />
+        </div>
+        <div className="input-wrap">
+          <label>Tech stack</label>
+          <input className="input" value={form.techStack} onChange={(e) => setField("techStack", e.target.value)} />
+        </div>
+        <div className="input-wrap">
+          <label>Description</label>
+          <textarea rows="4" value={form.description} onChange={(e) => setField("description", e.target.value)} />
+        </div>
+
+        <button className="btn primary" onClick={submitProject} disabled={submitting}>
+          {submitting ? "Submitting..." : "Submit Project"}
+        </button>
+      </section>
     </div>
   );
 }

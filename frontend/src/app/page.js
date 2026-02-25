@@ -1,53 +1,42 @@
-"use client";
+import Link from "next/link";
 
 export default function Home() {
   return (
     <div className="hero">
-      <h1>Talent Platform </h1>
+      <section className="hero-banner">
+        <h1>Build, Submit, Track, and Get Rewarded</h1>
+        <p>
+          Talent Platform evaluates real projects, not theory. Submit your GitHub work, receive structured technical
+          feedback, track your interview-stage progress, and compete with measurable outcomes.
+        </p>
 
-      <p>
-        A structured internship and real-world project evaluation platform
-        that enables students to demonstrate practical skills through
-        GitHub-based submissions and transparent technical review.
-      </p>
-
-      <div className="features">
-        <div className="card">
-          <h3>Real Project Evaluation</h3>
-          <p>
-            Students submit real GitHub projects instead of theoretical
-            assignments.
-          </p>
+        <div className="hero-cta">
+          <Link href="/login">
+            <button className="btn primary">Start as Candidate</button>
+          </Link>
+          <Link href="/login?type=admin">
+            <button className="btn secondary">Admin Access</button>
+          </Link>
         </div>
+      </section>
 
-        <div className="card">
-          <h3>Structured Admin Review</h3>
-          <p>
-            Technical evaluators provide detailed feedback and performance
-            scoring.
-          </p>
-        </div>
+      <h2 className="section-head">Why Candidates Prefer This Platform</h2>
+      <section className="grid-3">
+        <article className="card">
+          <h3>Transparent Review</h3>
+          <p>Every project is scored with admin feedback and visible status tracking from submission to decision.</p>
+        </article>
+        <article className="card">
+          <h3>Career Advantages</h3>
+          <p>Strong performers are shortlisted for next technical interview stages based on real work quality.</p>
+        </article>
+        <article className="card">
+          <h3>Rewards and Recognition</h3>
+          <p>Top performers can receive cash prizes, rewards, and verified completion certificates.</p>
+        </article>
+      </section>
 
-        <div className="card">
-          <h3>Public Leaderboard</h3>
-          <p>
-            Transparent ranking system highlights top performers based on
-            actual skill.
-          </p>
-        </div>
-
-        <div className="card">
-          <h3>Verified Certification</h3>
-          <p>
-            Successful participants receive performance-based certification
-            for internship validation.
-          </p>
-        </div>
-      </div>
-
-      <div className="footer">
-        © 2026 Talent Platform — Empowering Skill-Based Evaluation [ Contact: vtu21984@veltech.edu.in ]
-      </div>
+      <p className="footer">2026 Talent Platform. Practical project evaluation with measurable outcomes.</p>
     </div>
   );
 }
