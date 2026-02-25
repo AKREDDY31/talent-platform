@@ -18,6 +18,7 @@ const defaultForm = {
 };
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const strongPasswordPattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/;
 
 export default function LoginPage() {
   const params = useSearchParams();
@@ -52,8 +53,8 @@ export default function LoginPage() {
       return "Password confirmation does not match";
     }
 
-    if (form.password.length < 8) {
-      return "Password should be at least 8 characters";
+    if (!strongPasswordPattern.test(form.password)) {
+      return "Password must include uppercase, lowercase, number, special character, and be 8+ characters";
     }
 
     if (isAdminLogin && !form.adminInviteCode) {
@@ -199,6 +200,7 @@ export default function LoginPage() {
               <div className="input-wrap">
                 <label>Password*</label>
                 <input type="password" className="input" value={form.password} onChange={(e) => setField("password", e.target.value)} />
+                <small className="auth-muted">Use 8+ characters with uppercase, lowercase, number, and special character.</small>
               </div>
               <div className="input-wrap">
                 <label>Confirm password*</label>
