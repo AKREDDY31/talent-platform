@@ -2,6 +2,40 @@ import nodemailer from "nodemailer";
 
 let transporter;
 
+const sendWithResend = async ({ to, subject, html }) => {
+  const apiKey = process.env.RESEND_API_KEY;
+  const from = process.env.RESEND_FROM || process.env.SMTP_FROM;
+
+  if (!apiKey || !from) {
+    return { delivered: false, reason: "resend_not_configured" };
+  }
+
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from,
+      to: [to],
+      subject,
+      html,
+    }),
+  });
+
+  if (!response.ok) {
+    const bodyText = await response.text();
+    return {
+      delivered: false,
+      reason: `resend_http_${response.status}`,
+      error: bodyText.slice(0, 500),
+    };
+  }
+
+  return { delivered: true };
+};
+
 const getTransporter = () => {
   if (transporter) return transporter;
 
@@ -32,6 +66,21 @@ const getTransporter = () => {
 };
 
 export const sendEmail = async ({ to, subject, html }) => {
+  const provider = String(process.env.EMAIL_PROVIDER || "").toLowerCase().trim();
+
+  if (provider === "resend") {
+    const resendResult = await sendWithResend({ to, subject, html });
+    if (!resendResult.delivered) {
+      console.error("[mail-resend-failed]", {
+        to,
+        subject,
+        reason: resendResult.reason,
+        error: resendResult.error,
+      });
+    }
+    return resendResult;
+  }
+
   const sender = process.env.SMTP_FROM;
   const tx = getTransporter();
 

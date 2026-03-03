@@ -194,9 +194,7 @@ export const forgotPassword = async (req, res) => {
         email: user.email,
         error: mailError.message,
       });
-      return res.status(503).json({
-        message: "Email service is unavailable. Please try again after some time.",
-      });
+      return res.json({ message: "If the email exists, a reset link has been sent" });
     }
 
     if (!mailResult?.delivered) {
@@ -204,9 +202,7 @@ export const forgotPassword = async (req, res) => {
         reason: mailResult?.reason || "unknown",
         email: user.email,
       });
-      return res.status(503).json({
-        message: "Email service is unavailable. Please try again after some time.",
-      });
+      return res.json({ message: "If the email exists, a reset link has been sent" });
     }
 
     return res.json({ message: "If the email exists, a reset link has been sent" });
