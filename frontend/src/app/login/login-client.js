@@ -146,7 +146,11 @@ export default function LoginPage() {
       const res = await API.post("/auth/forgot-password", { email: forgotEmail });
       setInfo("success", res.data.message || "If the email exists, a reset link has been sent");
     } catch (error) {
-      setInfo("error", error.response?.data?.message || "Failed to request reset link");
+      if (error.code === "ECONNABORTED") {
+        setInfo("error", "Request timed out. Please try again in a moment.");
+      } else {
+        setInfo("error", error.response?.data?.message || "Failed to request reset link");
+      }
     } finally {
       setLoading(false);
     }

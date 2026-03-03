@@ -41,7 +41,13 @@ export default function ResetPasswordClient() {
       setMessage({ type: "success", text: res.data.message || "Password reset successful" });
       setTimeout(() => router.push("/login"), 1000);
     } catch (error) {
-      setMessage({ type: "error", text: error.response?.data?.message || "Failed to reset password" });
+      if (error.code === "ECONNABORTED") {
+        setMessage({ type: "error", text: "Request timed out. Please try again." });
+      } else if (!error.response) {
+        setMessage({ type: "error", text: "Network error. Please check connection and try again." });
+      } else {
+        setMessage({ type: "error", text: error.response?.data?.message || "Failed to reset password" });
+      }
     } finally {
       setLoading(false);
     }
