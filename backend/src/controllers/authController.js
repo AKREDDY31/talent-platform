@@ -182,11 +182,21 @@ export const forgotPassword = async (req, res) => {
     const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
     const resetLink = `${frontendUrl}/reset-password?token=${rawToken}`;
 
-    await sendEmail({
+    const mailResult = await sendEmail({
       to: user.email,
       subject: "Reset your Talent Platform password",
       html: `<p>Hi ${user.name},</p><p>Use this link to reset your password (valid for 30 minutes):</p><p><a href=\"${resetLink}\">Reset Password</a></p>`,
     });
+
+    if (!mailResult?.delivered) {
+      console.error("[forgot-password] mail delivery failed", {
+        reason: mailResult?.reason || "unknown",
+        email: user.email,
+      });
+      return res.status(503).json({
+        message: "Email service is unavailable. Please try again after some time.",
+      });
+    }
 
     return res.json({ message: "If the email exists, a reset link has been sent" });
   } catch (error) {
