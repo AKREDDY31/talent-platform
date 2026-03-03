@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import API from "@/lib/api";
 
+const strongPasswordPattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,64}$/;
+
 export default function ResetPasswordClient() {
   const params = useSearchParams();
   const router = useRouter();
@@ -20,8 +22,11 @@ export default function ResetPasswordClient() {
       return;
     }
 
-    if (!password || password.length < 8) {
-      setMessage({ type: "error", text: "Password must be at least 8 characters" });
+    if (!strongPasswordPattern.test(password)) {
+      setMessage({
+        type: "error",
+        text: "Password must include uppercase, lowercase, number, special character, and be 8+ characters",
+      });
       return;
     }
 
@@ -53,6 +58,7 @@ export default function ResetPasswordClient() {
         <div className="input-wrap">
           <label>New password</label>
           <input type="password" className="input" value={password} onChange={(e) => setPassword(e.target.value)} />
+          <small className="auth-muted">Use 8+ characters with uppercase, lowercase, number, and special character.</small>
         </div>
 
         <div className="input-wrap">
